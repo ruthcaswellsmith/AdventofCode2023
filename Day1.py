@@ -2,12 +2,10 @@ from utils import read_file
 from typing import List, Dict
 import re
 
-BIG_NUM = 10_000
-
 
 class CalibrationDocument:
-    def __init__(self, data: List[str]):
-        self.data = [Line(line) for line in data]
+    def __init__(self, lines: List[str], digits: Dict):
+        self.data = [Line(line, digits) for line in lines]
 
     @property
     def calibration_value(self):
@@ -15,33 +13,37 @@ class CalibrationDocument:
 
 
 class Line:
-    def __init__(self, line: str):
+    def __init__(self, line: str, digits: Dict):
         self.line = line
+        self.digits = digits
 
     @property
     def occurrences(self):
-        return {digit: [i.start() for i in re.finditer(digit, self.line)] for digit in VALID_DIGITS}
+        return {digit: [i.start() for i in re.finditer(digit, self.line)] for digit in self.digits}
 
     @property
-    def first_digit(self, ):
-        return min((k for k, v in self.occurrences.items() if v), key=lambda x: self.occurrences[x][0], default=None)
+    def first_digit(self):
+        return min((k for k, v in self.occurrences.items() if v), key=lambda x: self.occurrences[x][0])
 
     @property
-    def last_digit(self, ):
-        return max((k for k, v in self.occurrences.items() if v), key=lambda x: self.occurrences[x][-1], default=None)
+    def last_digit(self):
+        return max((k for k, v in self.occurrences.items() if v), key=lambda x: self.occurrences[x][-1])
 
     @property
     def calibration_value(self):
-        return int(VALID_DIGITS[self.first_digit] + VALID_DIGITS[self.last_digit])
+        return int(self.digits[self.first_digit] + self.digits[self.last_digit])
 
 
 if __name__ == '__main__':
     filename = 'input/Day1.txt'
-    doc = CalibrationDocument(read_file(filename))
-    VALID_DIGITS = {'1': '1', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9'}
+    data = read_file(filename)
+
+    valid_digits = {'1': '1', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9'}
+    doc = CalibrationDocument(data, valid_digits)
     print(f"The answer to part 1 is {doc.calibration_value}")
-    VALID_DIGITS = {'1': '1', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
-                    'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
-                    'six': '6', 'seven': '7', 'eight': '8', 'nine': '9'}
+
+    valid_digits.update({'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+                         'six': '6', 'seven': '7', 'eight': '8', 'nine': '9'})
+    doc = CalibrationDocument(data, valid_digits)
     print(f"The answer to part 2 is {doc.calibration_value}")
 
