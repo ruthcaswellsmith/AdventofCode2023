@@ -1,26 +1,34 @@
 from utils import read_file
 from typing import List, Dict
-import re
+import numpy as np
 
+COLORS = ['blue', 'red', 'green']
 
 class Game:
     def __init__(self, line: str):
-        self.game = line.split()[1].replace(':', "")
-
-        self.subsets = [Subset(text) for text in " ".join(line.split()[2:]).split(";")]
+        self.num = int(line.split()[1].replace(':', ""))
+        self.subsets = []
+        pieces = " ".join(line.split()[2:]).split(";")
+        for piece in pieces:
+            pts = piece.split()
+            self.subsets.append({pts[i + 1].replace(',', ''): int(pts[i]) for i in range(0, len(pts), 2)})
 
     def is_possible(self, bag: Dict):
         for subset in self.subsets:
-            for color, num in subset.cubes.items():
+            for color, num in subset.items():
                 if bag[color] < num:
                     return False
         return True
 
+    @property
+    def fewest_cubes(self):
+        return {color:
+                    max([subset.get(color, 0) for subset in self.subsets])
+                for color in COLORS}
 
-class Subset:
-    def __init__(self, text: str):
-        pts = text.split()
-        self.cubes = {pts[i + 1].replace(',', ''): int(pts[i]) for i in range(0, len(pts), 2)}
+    @property
+    def power(self) -> int:
+        return np.prod([v for v in self.fewest_cubes.values()])
 
 
 class EntireGame:
@@ -30,21 +38,23 @@ class EntireGame:
 
     @property
     def possible_games(self) -> List[int]:
-        return [ind + 1 for ind, val in
-                enumerate([game.is_possible(self.bag) for game in self.games]) if val]
+        return [game.num for game in self.games if game.is_possible(self.bag)]
 
     @property
-    def fewest_cubes(self):
-        pass
+    def total_power(self) -> int:
+        return sum([game.power for game in self.games])
 
 
 if __name__ == '__main__':
-    filename = 'input/test.txt'
+    filename = 'input/Day2.txt'
     data = read_file(filename)
 
     bag = {'red': 12, 'green': 13, 'blue': 14}
     entire_game = EntireGame([Game(line) for line in data], bag)
 
     print(f"The answer to part 1 is {sum(entire_game.possible_games)}")
+
+    print(f"The answer to part 2 is {entire_game.total_power}")
+
 
 
