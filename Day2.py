@@ -4,31 +4,28 @@ import numpy as np
 
 COLORS = ['blue', 'red', 'green']
 
+
 class Game:
     def __init__(self, line: str):
         self.num = int(line.split()[1].replace(':', ""))
-        self.subsets = []
-        pieces = " ".join(line.split()[2:]).split(";")
-        for piece in pieces:
-            pts = piece.split()
-            self.subsets.append({pts[i + 1].replace(',', ''): int(pts[i]) for i in range(0, len(pts), 2)})
+        self.subsets = self.__get_subsets(line)
 
-    def is_possible(self, bag: Dict):
-        for subset in self.subsets:
-            for color, num in subset.items():
-                if bag[color] < num:
-                    return False
-        return True
+    def __get_subsets(self, line: str):
+        return [
+            {pts[i + 1].replace(',', ''): int(pts[i]) for i in range(0, len(pts), 2)}
+            for pts in [piece.split() for piece in " ".join(line.split()[2:]).split(";")]
+        ]
+
+    def is_possible(self, bag: Dict) -> bool:
+        return all(bag[color] >= num for subset in self.subsets for color, num in subset.items())
 
     @property
     def fewest_cubes(self):
-        return {color:
-                    max([subset.get(color, 0) for subset in self.subsets])
-                for color in COLORS}
+        return {color: max([subset.get(color, 0) for subset in self.subsets]) for color in COLORS}
 
     @property
     def power(self) -> int:
-        return np.prod([v for v in self.fewest_cubes.values()])
+        return int(np.prod(list(self.fewest_cubes.values())))
 
 
 class EntireGame:
