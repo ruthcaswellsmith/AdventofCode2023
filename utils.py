@@ -4,6 +4,9 @@ from enum import Enum, auto
 from typing import List, Tuple, TypeVar, Union
 from functools import total_ordering
 import numpy as np
+from collections import defaultdict
+import re
+
 
 
 T = TypeVar('T')
@@ -265,3 +268,27 @@ class Graph:
         for neighbor in neighbors:
             neighbor.cost = min(neighbor.cost,
                                 current.cost + self.edge_costs[current.id, neighbor.id])
+
+
+class CharRemover:
+    def __init__(self, chars_to_remove):
+        self.translation_table = str.maketrans("", "", chars_to_remove)
+
+    def remove_chars(self, input_string):
+        return input_string.translate(self.translation_table)
+
+
+class CharReplacer:
+    def __init__(self, chars_to_replace):
+        self.translation_table = str.maketrans(chars_to_replace, ' ' * len(chars_to_replace))
+
+    def replace_chars(self, input_string):
+        return input_string.translate(self.translation_table)
+
+
+def find_exact_match(number, input_string):
+    pattern = fr'(?<!\d){re.escape(str(number))}(?!\d)'
+    matches = re.finditer(pattern, input_string)
+
+    match = next(matches, None)  # Get the desired occurrence
+    return match.start() if match else None
