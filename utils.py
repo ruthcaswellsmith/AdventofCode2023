@@ -4,10 +4,7 @@ from enum import Enum, auto
 from typing import List, Tuple, TypeVar, Union
 from functools import total_ordering
 import numpy as np
-from collections import defaultdict
 import re
-
-
 
 T = TypeVar('T')
 LARGE = 1_000_000
@@ -292,3 +289,22 @@ def find_exact_match(number, input_string):
 
     match = next(matches, None)  # Get the desired occurrence
     return match.start() if match else None
+
+
+def left(r1: range, r2: range) -> Union[range, None]:
+    if r1.start < r2.start:
+        return range(r1.start, min(r1.stop, r2.start))
+
+
+def right(r1: range, r2: range) -> Union[range, None]:
+    if r1.stop > r2.stop:
+        return range(max(r1.start, r2.stop), r1.stop)
+
+
+def middle(r1: range, r2: range) -> Union[range, None]:
+    if r1.start <= r2.start <= r1.stop or r2.start <= r1.start <= r2.stop:
+        return range(max(r1.start, r2.start), min(r1.stop, r2.stop))
+
+
+def get_range_intersection(r1: range, r2: range) -> (range, range, range):
+    return left(r1, r2), middle(r1, r2), right(r1, r2)
