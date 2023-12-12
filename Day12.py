@@ -4,12 +4,10 @@ from typing import List, Tuple
 
 
 class Record:
-    def __init__(self, line: str):
-        pts = line.split(' ')
-        self.springs = pts[0]
-        self.groups_to_find = [int(ele) for ele in pts[1].split(',')]
+    def __init__(self, springs: str, groups_to_find: List[int]):
+        self.springs = springs
+        self.groups_to_find = groups_to_find
         self.pattern = self.get_pattern()
-        print()
 
     def get_pattern(self) -> str:
         pound_signs = ["".join(['#' for i in range(group)]) for group in self.groups_to_find]
@@ -30,7 +28,6 @@ class Record:
         # If we have a complete string check if it matches
         if string.find('?') == -1:
             if re.match(self.pattern, string):
-                print('found a match')
                 return [string]
             else:
                 return []
@@ -52,9 +49,14 @@ if __name__ == '__main__':
     filename = 'input/Day12.txt'
     data = read_file(filename)
 
-    records = [Record(line) for line in data]
+    records = []
+    for line in data:
+        pts = line.split(' ')
+        springs = pts[0]
+        groups_to_find = [int(ele) for ele in pts[1].split(',')]
+        records.append(Record(springs, groups_to_find))
     matches = [record.find_matches(record.springs) for record in records]
     print(f"The answer to part 1 is {sum([len(match) for match in matches])}.")
 #    print(f"The answer to part 2 is {2}.")
 
-    records = [Record(line, folds=5) for line in data]
+#    records = [Record(line, folds=5) for line in data]
