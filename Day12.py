@@ -24,7 +24,13 @@ class Record:
         groups = [len(match) for match in matches]
         return groups
 
-    def find_matches(self, string: str):
+    def find_matches(self, string: str, memo=None):
+        if memo is None:
+            memo = {}
+
+        if string in memo:
+            return memo[string]
+
         # If we have a complete string check if it matches
         if string.find('?') == -1:
             if re.match(self.pattern, string):
@@ -41,7 +47,8 @@ class Record:
         results = []
         for char in ['#', '.']:
             new_str = string.replace('?', char, 1)
-            results += self.find_matches(new_str)
+            results += self.find_matches(new_str, memo)
+            memo[new_str] = results
         return results
 
 
