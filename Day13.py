@@ -15,7 +15,22 @@ class Pattern:
         self.pattern = np.array([[1 if ele == '#' else 0 for ele in line] for line in data])
         self.horizontal_ind = self.find_relected_line(Direction.HORIZONTAL)
         self.vertical_ind = self.find_relected_line(Direction.VERTICAL) if self.horizontal_ind is None else None
-        self.score = self.vertical_ind + 1 if self.vertical_ind != None else 100 * (self.horizontal_ind + 1)
+
+    @property
+    def score(self):
+        if self.vertical_ind:
+            return self.vertical_ind + 1
+        if self.horizontal_ind:
+            return 100 * (self.horizontal_ind + 1)
+
+    def pattern_reflects(self, array: np.array, ind: int):
+        rows_to_check = min(ind, len(array) - ind - 2)
+        reflects = True
+        for i in range(1, rows_to_check + 1):
+            if not np.array_equal(array[ind - i, :], array[ind + i + 1, :]):
+                reflects = False
+                break
+        return reflects
 
     def find_relected_line(self, direction: Direction):
         array = self.pattern if direction == Direction.HORIZONTAL else np.rot90(self.pattern, k=3)
@@ -28,20 +43,17 @@ class Pattern:
         if not indices:
             return
 
+        reflects, ind = False, None
         for ind in indices:
-            rows_to_check = min(ind, len(array) - ind - 2)
-            reflects = True
-            for i in range(1, rows_to_check + 1):
-                if not np.array_equal(array[ind-i, :], array[ind+i+1, :]):
-                    reflects = False
-                    break
+            reflects = self.pattern_reflects(array, ind)
             if reflects:
                 break
+
         return ind if reflects else None
 
 
 if __name__ == '__main__':
-    filename = 'input/Day13.txt'
+    filename = 'input/test.txt'
     data = read_file(filename)
 
     empty_list_indices = [i for i, sublist in enumerate(data) if not sublist]
