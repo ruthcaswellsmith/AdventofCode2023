@@ -26,20 +26,59 @@ class Direction(str, Enum):
 
 
 class Pattern:
-    def __init__(self, num: int, pattern: np.array):
-        self.num = num
+    def __init__(self, pattern: np.array, parent=None):
         self.pattern = pattern
-        self.horizontal_ind = self.find_relected_line(Direction.HORIZONTAL)
-        self.vertical_ind = self.find_relected_line(Direction.VERTICAL) if self.horizontal_ind is None else None
+        self.parent = parent
+        self.cleaned_patterns = []
+        self.horizontals = self.find_relected_lines(self.pattern)
+        self.verticals = self.find_relected_lines(np.rot90(self.pattern, k=3))
+
+    def update_array(self, arr1: np.array, arr2: np.array):
+        ind = np.where(arr1 != arr2)[0][0]
+        arr1[ind] = 0 if arr1[ind] == 1 else 0
+        arr2[ind] = 0 if arr2[ind] == 1 else 0
+
+    def add_cleaned_patterns(self, direction: Direction):
+        max = self.pattern.shape[0] if direction == Direction.HORIZONTAL else \
+            self.pattern.shape[1]
+
+        for i in range(max):
+            for k in range(i + 1, max):
+                array = self.pattern.copy()
+                arr1 = array[i, :] if direction == Direction.HORIZONTAL \
+                    else array[:, i]
+                arr2 = array[k, :] if direction == Direction.HORIZONTAL \
+                    else array[:, k]
+                if sum(arr1 != arr2) == 1:
+                    self.update_array(arr1, arr2)
+                    self.add_cleaned_pattern(array)
+
+    def add_cleaned_pattern(self, cleaned_pattern: np.array):
+        # Don't add the same child twice
+        for pattern in self.cleaned_patterns:
+            if np.array_equal(pattern.pattern, cleaned_pattern):
+                return
+        child = Pattern(cleaned_pattern, parent=self)
+        self.cleaned_patterns.append(child)
 
     @property
     def score(self):
-        if self.vertical_ind != None:
-            return self.vertical_ind + 1
-        if self.horizontal_ind != None:
-            return 100 * (self.horizontal_ind + 1)
+        h_to_ignore = self.parent.horizontals[0] if self.parent and self.parent.horizontals else None
+        v_to_ignore = self.parent.verticals[0] if self.parent and self.parent.verticals else None
+        horizontals = [line for line in self.horizontals if line != h_to_ignore] \
+            if self.parent else self.horizontals
+        verticals = [line for line in self.verticals if line != v_to_ignore] \
+            if self.parent else self.verticals
 
-    def pattern_reflects(self, array: np.array, ind: int):
+        score = 0
+        if horizontals:
+            score += 100 * (horizontals[0] + 1)
+        if verticals:
+            score += verticals[0] + 1
+        return score
+
+    @staticmethod
+    def pattern_reflects(array: np.array, ind: int):
         rows_to_check = min(ind, len(array) - ind - 2)
         reflects = True
         for i in range(1, rows_to_check + 1):
@@ -48,24 +87,21 @@ class Pattern:
                 break
         return reflects
 
-    def find_relected_line(self, direction: Direction):
-        array = self.pattern if direction == Direction.HORIZONTAL else np.rot90(self.pattern, k=3)
-
-        # Get indices where we have a reflection
+    def find_relected_lines(self, array: np.array):
+        # Get indices where two lines match
         indices = []
         for ind in range(len(array) - 1):
             if np.array_equal(array[ind, :], array[ind+1, :]):
                 indices.append(ind)
         if not indices:
-            return
+            return []
 
-        reflects, ind = False, None
+        lines_of_reflections = []
         for ind in indices:
-            reflects = self.pattern_reflects(array, ind)
-            if reflects:
-                break
+            if self.pattern_reflects(array, ind):
+                lines_of_reflections.append(ind)
 
-        return ind if reflects else None
+        return lines_of_reflections
 
 
 if __name__ == '__main__':
@@ -73,27 +109,14 @@ if __name__ == '__main__':
     data = read_file(filename)
     grids = parse_input(data)
 
-    patterns = [Pattern(num, grid) for num, grid in enumerate(grids)]
+    patterns = [Pattern(grid) for grid in grids]
     print(f"The answer to part 1 is {sum([pattern.score for pattern in patterns])}.")
 
-    counts = {}
-    for pattern in patterns:
-        count = 0
+    [pattern.add_cleaned_patterns(Direction.HORIZONTAL) for pattern in patterns]
+    [pattern.add_cleaned_patterns(Direction.VERTICAL) for pattern in patterns]
 
-        array = pattern.pattern
-        for i in range(array.shape[0]):
-            for j in range(i + 1, array.shape[0]):
-                if sum(array[i, :] != array[j, :]) == 1:
-                    count += 1
-
-        array = np.rot90(pattern.pattern, k=3)
-        for i in range(array.shape[0]):
-            for j in range(i + 1, array.shape[0]):
-                if sum(array[i, :] != array[j, :]) == 1:
-                    count += 1
-
-        counts[pattern.num] = count
-    print(1)
+    print(f"The answer to part 2 is "
+          f"{sum(cleaned_pattern.score for pattern in patterns for cleaned_pattern in pattern.cleaned_patterns)}.")
 
 
 
