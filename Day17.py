@@ -31,24 +31,30 @@ class Map:
         for i in range(len(data)):
             for j in range(len(data[0])):
                 adj_list = []
-                for ind in range(1, min(5, self.max_y - j + 1)):
-                    # grab nodes to the right
-                    edge_costs[((i, j), (i, j + ind))] = LARGE if ind == 4 else \
-                        sum(costs[i, j + 1: j + 1 + ind])
-                    adj_list.append((i, j + ind))
-                for ind in range(1, min(5, j + 1)):
-                    # grab nodes to the left
-                    edge_costs[((i, j), (i, j - ind))] = LARGE if ind == 4 else \
-                        sum(costs[i, j - ind: j])
-                    adj_list.append((i, j - ind))
-                for ind in range(1, min(5, self.max_x - i + 1)):
-                    edge_costs[((i, j), (i + ind, j))] = LARGE if ind == 4 else \
-                        sum(costs[i + 1: i + 1 + ind, j])
-                    adj_list.append((i + ind, j))
-                for ind in range(1, min(5, i + 1)):
-                    edge_costs[((i, j), (i - ind, j))] = LARGE if ind == 4 else \
-                        sum(costs[i - ind: i, j])
-                    adj_list.append((i - ind, j))
+                if i > 0:
+                    adj_list.append((i - 1, j))
+                    edge_costs[((i, j), (i - 1, j))] = costs[i - 1, j]
+                    if i > 3:
+                        adj_list.append((i - 3, j))
+                        edge_costs[((i, j), (i - 3, j))] = LARGE
+                if i < self.max_x:
+                    adj_list.append((i + 1, j))
+                    edge_costs[((i, j), (i + 1, j))] = costs[i + 1, j]
+                    if i < self.max_x - 3:
+                        adj_list.append((i + 3, j))
+                        edge_costs[((i, j), (i + 3, j))] = LARGE
+                if j > 0:
+                    adj_list.append((i, j - 1))
+                    edge_costs[((i, j), (i, j - 1))] = costs[i, j - 1]
+                    if j > 3:
+                        adj_list.append((i, j - 3))
+                        edge_costs[((i, j), (i, j - 3))] = LARGE
+                if j < self.max_y:
+                    adj_list.append((i, j + 1))
+                    edge_costs[((i, j), (i, j + 1))] = costs[i, j + 1]
+                    if j < self.max_y - 3:
+                        adj_list.append((i, j + 3))
+                        edge_costs[((i, j), (i, j + 3))] = LARGE
                 nodes += [Node((i, j), adj_list)]
         return nodes, edge_costs
 
@@ -104,5 +110,6 @@ if __name__ == "__main__":
 
     city_map = Map(data)
     city_map.find_all_shortest_paths()
-    print(1)
+    print(f"The answer to part 1 is "
+          f"{city_map.shortest_paths[((0, 0), (city_map.max_x, city_map.max_y))]}")
 
