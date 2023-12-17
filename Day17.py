@@ -1,8 +1,9 @@
-from utils import read_file, MapDirection
-from typing import List, Tuple
 from functools import lru_cache
+from typing import List, Tuple
 
 import numpy as np
+
+from utils import read_file, MapDirection
 
 LARGE = 1_000_000
 
@@ -15,49 +16,54 @@ class Node:
 
 
 class Map:
-    def __init__(self, data: List[List[str]]):
+    def __init__(self, data: np.array):
         self.max_x = len(data) - 1
         self.max_y = len(data[0]) - 1
-        self.nodes, self.edge_costs = self.get_nodes_and_edge_costs(data)
+        self.nodes = self.get_nodes(data)
+        self.edge_costs = self.get_edge_costs(data)
         self.shortest_paths = self.edge_costs.copy()
         self.current_cost = 0
         self.visited: List[Node] = []
         self.direction = MapDirection.EAST
         self.steps = 1
 
-    def get_nodes_and_edge_costs(self, data: List[List[str]]):
+    def get_nodes(self, data: List[List[str]]):
         nodes = []
-        edge_costs = {}
-        costs = np.array([[int(ele) for ele in line] for line in data])
         for i in range(len(data)):
             for j in range(len(data[0])):
-                adj_list = []
-                if i > 0:
-                    adj_list.append((i - 1, j))
-                    edge_costs[((i, j), (i - 1, j))] = costs[i - 1, j]
-                    if i > 3:
-                        adj_list.append((i - 3, j))
-                        edge_costs[((i, j), (i - 3, j))] = LARGE
-                if i < self.max_x:
-                    adj_list.append((i + 1, j))
-                    edge_costs[((i, j), (i + 1, j))] = costs[i + 1, j]
-                    if i < self.max_x - 3:
-                        adj_list.append((i + 3, j))
-                        edge_costs[((i, j), (i + 3, j))] = LARGE
-                if j > 0:
-                    adj_list.append((i, j - 1))
-                    edge_costs[((i, j), (i, j - 1))] = costs[i, j - 1]
-                    if j > 3:
-                        adj_list.append((i, j - 3))
-                        edge_costs[((i, j), (i, j - 3))] = LARGE
-                if j < self.max_y:
-                    adj_list.append((i, j + 1))
-                    edge_costs[((i, j), (i, j + 1))] = costs[i, j + 1]
-                    if j < self.max_y - 3:
-                        adj_list.append((i, j + 3))
-                        edge_costs[((i, j), (i, j + 3))] = LARGE
+                adj_list = [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1),
+                    (i, j + 2), (i + 1, j + 1), (i - 1, j + 1),
+                    (i, j - 2), (i + 1, j - 1), (i - 1, j - 1),
+                    (i + 2, j), (i + 1, j - 1), (i + 1, j + 1),
+                    (i - 2, j), (i - 1, j - 1), (i - 1, j + 1)
+                    ]
+                adj_list = list(set([ele for ele in adj_list if
+                                     ele[0] >= 0 and ele[1] >= 0 and \
+                                     ele[0] <= self.max_x and ele[1] <= self.max_y]))
                 nodes += [Node((i, j), adj_list)]
-        return nodes, edge_costs
+        return nodes
+
+    def get_edge_costs(self, data: List[List[str]]):
+        edge_costs = {}
+        for n1 in self.nodes:
+            for id in n1.adj_list:
+                n2 = self.get_node(id)
+                if n1.id[0] == n2.id[0]:
+                    edge_costs[(n1.id, n2.id)] = np.sum([data[n1.id[0], n1.id[1] + 1:n2.id[1] + 1]])
+                elif n1.id[1] == n2.id[1]:
+                    edge_costs[(n1.id, n2.id)] = np.sum([data[n1.id[0] + 1: n2.id[0] + 1, n1.id[1]]])
+                else:
+                    if n1.id[0] < n2.id[0] and n1.id[1] < n2.id[1]:
+                        intermediates = [(n1.id[0] + 1, n1.id[1]), (n1.id[0], n1.id[1] + 1)]
+                    elif n1.id[0] < n2.id[0] and n1.id[1] > n2.id[1]:
+                        intermediates = [(n1.id[0] + 1, n1.id[1]), (n1.id[0], n1.id[1] - 1)]
+                    elif n1.id[0] > n2.id[0] and n1.id[1] < n2.id[1]:
+                        intermediates = [(n1.id[0] - 1, n1.id[1]), (n1.id[0], n1.id[1] + 1)]
+                    else:
+                        intermediates = [(n1.id[0] - 1, n1.id[1]), (n1.id[0], n1.id[1] - 1)]
+                    edge_costs[(n1.id, n2.id)] = \
+                        min([data[intermediate] for intermediate in intermediates]) + data[n2.id]
+        return edge_costs
 
     @property
     def num_nodes(self):
@@ -110,7 +116,7 @@ if __name__ == "__main__":
     filename = 'input/test.txt'
     data = read_file(filename)
 
-    city_map = Map(data)
+    city_map = Map(np.array([[int(ele) for ele in line] for line in data]))
     starting_node = city_map.get_node((0, 0))
     city_map.find_shortest_paths(starting_node)
     print(f"The answer to part 1 is "
