@@ -1,5 +1,6 @@
 from utils import read_file, MapDirection
 from typing import List, Tuple
+from functools import lru_cache
 
 import numpy as np
 
@@ -71,11 +72,12 @@ class Map:
     def get_node(self, id: Tuple[int, int]):
         return next(iter(n for n in self.nodes if n.id == id))
 
+    @lru_cache()
     def find_all_shortest_paths(self):
         for n in self.nodes:
-            self.__find_shortest_paths(n)
+            self.find_shortest_paths(n)
 
-    def __find_shortest_paths(self, starting_node: Node):
+    def find_shortest_paths(self, starting_node: Node):
         self.visited, self.current_cost = [], 0
         for n in self.nodes:
             n.cost = LARGE
@@ -109,7 +111,8 @@ if __name__ == "__main__":
     data = read_file(filename)
 
     city_map = Map(data)
-    city_map.find_all_shortest_paths()
+    starting_node = city_map.get_node((0, 0))
+    city_map.find_shortest_paths(starting_node)
     print(f"The answer to part 1 is "
           f"{city_map.shortest_paths[((0, 0), (city_map.max_x, city_map.max_y))]}")
 
