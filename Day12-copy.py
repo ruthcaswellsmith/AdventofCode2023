@@ -28,6 +28,10 @@ class Record:
             # we have too many initial pound signs
             return 0
 
+        # # If our first group is determined and we don't have enough ? return 0
+        # if '?' not in self.groups[0] and self.groups[0].count('#') != target_groups[0]:
+        #     return 0
+
         # If we don't have enough groups return 0
         if sum([self.max_groups(g) for g in groups]) < len(target_groups):
             return 0
@@ -38,10 +42,19 @@ class Record:
 
         # Otherwise we sub in # and . for first ?
         g = groups[0]
+        pound = self.find_matches([groups[0].replace('?', '#', 1)] + groups[1:], target_groups)
         ind = g.find('?')
-        return self.find_matches([groups[0].replace('?', '#', 1)] + groups[1:], target_groups) \
-               + (self.find_matches([g[ind + 1:]] + groups[1:], target_groups[1:]) if ind > 0 else \
-                self.find_matches([g[ind + 1:]] + groups[1:], target_groups))
+        if ind == 0:
+            # if we start with a dot we can just throw it out and not add another group
+            dot = self.find_matches([g[1:]] + groups[1:], target_groups)
+        else:
+            if len(g[:ind]) == target_groups[0]:
+                # we know the first group matches, we can drop it and search this path
+                dot = self.find_matches([g[ind+1:]] + groups[1:], target_groups[1:])
+            else:
+                # this path is a dead-end
+                dot = 0
+        return pound + dot
 
     @staticmethod
     def count_pound_signs(string: str) -> int:
@@ -92,7 +105,7 @@ if __name__ == '__main__':
         springs = pts[0]
         groups_to_find = [int(ele) for ele in pts[1].split(',')]
         records.append(Record(springs, groups_to_find))
-    print(records[2].find_matches(records[2].groups, records[2].target_groups))
+    print(records[6].find_matches(records[6].groups, records[6].target_groups))
     #
     # matches = [record.matches for record in records]
     # print(f"The answer to part 1 is {sum([len(match) for match in matches])}.")
