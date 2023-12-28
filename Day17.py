@@ -1,111 +1,116 @@
-from utils import read_file, MapDirection
-from typing import List, Tuple
+from __future__ import annotations
+
+from utils import read_file, Part
+from typing import Tuple
+import heapq
+
 import numpy as np
 
 
 LARGE = 1_000_000
 
 
-class Node:
-    def __init__(self, id: Tuple[int, int], adj_list: List[Tuple[int, int]]):
-        self.id = id
-        self.adj_list = adj_list
-        self.cost = LARGE
-        self.direction = None
-        self.steps = 0
+deltas = {0: (0, 1), 1: (1, 0), 2: (0, -1), 3: (-1, 0)}
 
-    def __eq__(self, other):
-        return True if self.id == other.id else False
+
+class State:
+    def __init__(self, pos: Tuple[int, int], direction: int, steps: int):
+        self.pos = pos
+        self.direction = direction
+        self.steps = steps
+
+    def __str__(self):
+        return f"State({self.pos}, {self.direction}, {self.steps})"
+
+    def __lt__(self, other: State):
+        return self.steps < other.steps
+
+    def __eq__(self, other: State):
+        return self.pos is other.pos and \
+               self.direction == other.direction and \
+               self.steps == other.steps
 
 
 class Graph:
-    def __init__(self, data: np.array):
-        self.nodes = self.__get_nodes()
-        self.edge_costs = data
-        self.shortest_paths = {}
-        self.current_cost = 0
-        self.visited: List[Node] = []
+    def __init__(self, costs: np.array, part: Part):
+        self.part = part
+        self.maxx, self.maxy = costs.shape
+        self.edge_costs = costs
+        self.total_costs = {}
 
-    def __get_nodes(self):
-        nodes = []
-        for i in range(len(data)):
-            for j in range(len(data[0])):
-                adj_list = [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]
-                adj_list = [t for t in adj_list if 0 <= t[0] < len(data) and 0 <= t[1] < len(data[0])]
-                nodes.append(Node((i, j), adj_list))
-        return nodes
+    def find_shortest_path(self):
+        state1, state2 = State((0, 0), 0, 0), State((0, 0), 1, 0)
+        self.total_costs[str(state1)] = 0
+        self.total_costs[str(state2)] = 0
 
-    @property
-    def num_nodes(self):
-        return len(self.nodes)
+        queue = [(0, state1), (0, state2)]
+        while queue:
+            cost, state = heapq.heappop(queue)
 
-    @property
-    def unvisited_nodes(self):
-        unvisited = [n for n in self.nodes if n not in self.visited]
-        unvisited.sort(key=lambda n: n.cost)
-        return unvisited
+            if self.part == Part.PT1 and \
+                    state.pos == (self.maxx - 1, self.maxy - 1):
+                return self.total_costs[str(state)]
+            if self.part == Part.PT2 and \
+                    state.pos == (self.maxx - 1, self.maxy - 1):
+                return self.total_costs[str(state)]
 
-    def get_node(self, id: Tuple[int, int]):
-        return next(iter(n for n in self.nodes if n.id == id))
+            if cost > self.total_costs[str(state)]:
+                continue
+            neighbors = self.get_neighbors(state, self.part)
 
-    def find_all_shortest_paths(self):
-        for n in self.nodes:
-            self.find_shortest_paths(n)
+            for neighbor in neighbors:
+                new_cost = cost + self.edge_costs[neighbor.pos]
+                if new_cost < self.total_costs.get(str(neighbor), LARGE):
+                    self.total_costs[str(neighbor)] = new_cost
+                    heapq.heappush(queue, (new_cost, neighbor))
 
-    def find_shortest_paths(self, starting_node: Node):
-        self.visited, self.current_cost = [], 0
-        for n in self.nodes:
-            n.cost = LARGE
-        current = starting_node
-        current.cost = 0
+    def get_neighbors(self, state: State, part: Part):
+        neighbors = []
+        if part == part.PT1:
+            # we can always turn
+            for delta_direction in [1, -1]:
+                new_dir = (state.direction + delta_direction) % 4
+                new_pos = self.get_new_position(state.pos, new_dir)
+                neighbors.append(State(new_pos, new_dir, 1))
+            # if we've taken fewer than three steps we can also continue straight
+            if state.steps < 3:
+                new_pos = self.get_new_position(state.pos, state.direction)
+                neighbors.append(State(new_pos, state.direction, state.steps + 1))
 
-        done = False
-        while not done:
-            self.visited.append(current)
-            neighbors = self.get_unvisited_neighbors(current)
-            self.update_costs_for_neighbors(current, neighbors)
-            if not len(self.visited) == self.num_nodes:
-                current = self.unvisited_nodes[0]
-            else:
-                done = True
-        for n in self.nodes:
-            self.shortest_paths[f"{starting_node.id}-{n.id}"] = n.cost
-            self.shortest_paths[f"{n.id}-{starting_node.id}"] = n.cost
+        else:
+            # if we have taken fewer than ten steps we can continue on
+            if state.steps < 10:
+                new_pos = self.get_new_position(state.pos, state.direction)
+                # if the neighbor is the end state and we haven't taken at least 4 steps we
+                # can't visit it
+                if not (new_pos == (self.maxx-1, self.maxy-1) and state.steps < 4):
+                    neighbors.append(State(new_pos, state.direction, state.steps + 1))
 
-    def get_unvisited_neighbors(self, current: Node) -> List[Node]:
-        return [self.get_node(i) for i in current.adj_list if self.get_node(i) not in self.visited]
+            if state.steps > 3:
+                # if we have taken four steps in same direction we can turn
+                for delta_direction in [1, -1]:
+                    new_dir = (state.direction + delta_direction) % 4
+                    new_pos = self.get_new_position(state.pos, new_dir)
+                    neighbors.append(State(new_pos, new_dir, 1))
+
+        # only return neighbors that are not off the grid
+        return [n for n in neighbors if 0 <= n.pos[0] < self.maxx and 0 <= n.pos[1] < self.maxy]
 
     @staticmethod
-    def get_direction_of_neighbor(n1: Node, n2: Node) -> MapDirection:
-        if n1.id[0] > n2.id[0]:
-            return MapDirection.NORTH
-        elif n1.id[0] < n2.id[0]:
-            return MapDirection.SOUTH
-        elif n1.id[1] > n2.id[1]:
-            return MapDirection.WEST
-        return MapDirection.EAST
-
-    def update_costs_for_neighbors(self, current: Node, neighbors: List[Node]):
-        for neighbor in neighbors:
-            direction = self.get_direction_of_neighbor(current, neighbor)
-            steps = current.steps + 1 if direction == current.direction else 1
-            edge_cost = LARGE if steps == 4 else self.edge_costs[neighbor.id]
-            neighbor.cost = min(neighbor.cost, current.cost + edge_cost)
-            neighbor.direction = direction
-            neighbor.steps = steps
+    def get_new_position(pos: Tuple[int, int], direction: int) -> Tuple[int, int]:
+        return pos[0] + deltas[direction][0], pos[1] + deltas[direction][1]
 
 
 if __name__ == "__main__":
-    filename = 'input/test.txt'
+    filename = 'input/Day17.txt'
     data = read_file(filename)
 
-    graph = Graph(np.array([[int(ele) for ele in line] for line in data]))
-    starting_node = graph.get_node((0, 0))
-    starting_node.steps = 1
-    starting_node.direction = MapDirection.EAST
-    ending_node = graph.get_node((len(data) - 1, len(data[0]) - 1))
-    graph.find_shortest_paths(starting_node)
+    graph = Graph(np.array([[int(ele) for ele in line] for line in data]), Part.PT1)
+    costs = [graph.find_shortest_path()]
 
-    key = f'{starting_node.id}-{ending_node.id}'
-    print(f"The answer to part 1 is {graph.shortest_paths[key]}")
+    print(f"The answer to part 1 is {min(costs)}")
 
+    graph = Graph(np.array([[int(ele) for ele in line] for line in data]), Part.PT2)
+    costs = [graph.find_shortest_path()]
+
+    print(f"The answer to part 2 is {min(costs)}")
