@@ -126,13 +126,11 @@ if __name__ == '__main__':
         groups_to_find = [int(ele) for ele in pts[1].split(',')]
         records.append(Record(springs, groups_to_find))
     print(sum([record.find_matches(tuple(record.groups), tuple(record.target_groups)) for record in records]))
-    print(len(count))
-    print(count)
-    print(sum(count))
-    # new_records = []
-    # for i, record in enumerate(records):
-    #     new_target_groups = record.target_groups * NUM_FOLDS
-    #     new_springs = "?".join([record.springs for _ in range(NUM_FOLDS)])
-    #     new_records.append(Record(new_springs, new_target_groups))
-    # print(sum([record.find_matches(tuple(record.groups), tuple(record.target_groups)) for record in new_records]))
+
+    new_records = []
+    for i, record in enumerate(records):
+        new_target_groups = record.target_groups * NUM_FOLDS
+        new_springs = "?".join([record.springs for _ in range(NUM_FOLDS)])
+        new_records.append(Record(new_springs, new_target_groups))
+    print(sum([record.find_matches(tuple(record.groups), tuple(record.target_groups)) for record in new_records]))
 

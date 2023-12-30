@@ -25,7 +25,6 @@ class Record:
 
     @lru_cache
     def find_matches(self, string: str):
-        print(string)
         # If we have a complete string check if it matches
         if string.find('?') == -1:
             if self.pattern.match(string):
@@ -52,7 +51,7 @@ class Record:
 
 
 if __name__ == '__main__':
-    filename = 'input/test.txt'
+    filename = 'input/Day12.txt'
     data = read_file(filename)
 
     records = []
@@ -61,5 +60,5 @@ if __name__ == '__main__':
         springs = pts[0]
         groups_to_find = [int(ele) for ele in pts[1].split(',')]
         records.append(Record(springs, groups_to_find))
-    matches = [record.find_matches(record.springs) for record in [records[0]]]
+    matches = [record.find_matches(record.springs) for record in records]
     print(f"The answer to part 1 is {sum(matches)}.")
