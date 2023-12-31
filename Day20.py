@@ -6,13 +6,14 @@ from typing import Dict, List
 import numpy as np
 from queue import Queue
 
-from utils import read_file
+from utils import read_file, Part
 
 BROADCASTER = 'broadcaster'
 BUTTON = 'button'
 OUTPUT = 'output'
 
 NUM_CYCLES = 1000
+
 
 class Pulse(str, Enum):
     HIGH = auto()
@@ -79,7 +80,8 @@ class OutputOnly(Module):
 
 
 class ModuleManager:
-    def __init__(self, data: List[str]):
+    def __init__(self, data: List[str], part: Part):
+        self.part = part
         self.modules: Dict[id, Module] = self.get_modules(data)
         self.populate_inputs()
         self.queue = Queue()
@@ -123,8 +125,9 @@ class ModuleManager:
         self.queue.put((Pulse.LOW, BUTTON, BROADCASTER))
         while not self.queue.empty():
             pulse, source, dest = self.queue.get()
-            if self.watcher(pulse, source, dest):
-                self.found = True
+            if self.part == Part.PT2:
+                if self.watcher(pulse, source, dest):
+                    self.found = True
             self.pulses[pulse] += 1
             self.modules[dest].process_pulse(pulse, source)
 
@@ -133,7 +136,7 @@ if __name__ == "__main__":
     filename = 'input/Day20.txt'
     data = read_file(filename)
 
-    manager = ModuleManager(data)
+    manager = ModuleManager(data, Part.PT1)
     for i in range(NUM_CYCLES):
         manager.push_button()
 
@@ -145,18 +148,17 @@ if __name__ == "__main__":
     # low pulse to the conjunction module.  Then we find the LCM of those cycles
 
     # Find the conjunction module
-    manager = ModuleManager(data)
+    manager = ModuleManager(data, Part.PT2)
     conjunction = next(iter([module.id for module in manager.modules.values() if module.outputs == ['rx']]))
     inputs = manager.modules[conjunction].inputs
     lcm = 1
     for id in inputs:
         num = 0
-        manager = ModuleManager(data)
+        manager = ModuleManager(data, Part.PT2)
         manager.watcher = lambda pulse, source, dest: pulse == Pulse.HIGH and source == id and dest == conjunction
         while not manager.found:
             num += 1
             manager.push_button()
-            # found = not all(value == Pulse.HIGH for value in manager.modules[id].most_recent_pulses.values())
         lcm *= num
 
     print(f"The answer to Part 2 is {lcm}")
