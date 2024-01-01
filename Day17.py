@@ -47,11 +47,7 @@ class Graph:
         while queue:
             cost, state = heapq.heappop(queue)
 
-            if self.part == Part.PT1 and \
-                    state.pos == (self.maxx - 1, self.maxy - 1):
-                return self.total_costs[str(state)]
-            if self.part == Part.PT2 and \
-                    state.pos == (self.maxx - 1, self.maxy - 1):
+            if state.pos == (self.maxx - 1, self.maxy - 1):
                 return self.total_costs[str(state)]
 
             if cost > self.total_costs[str(state)]:
